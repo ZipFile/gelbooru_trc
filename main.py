@@ -84,12 +84,16 @@ def get_count(tag, validate_tag=True):
 
 class Gelbooru2TagsRatio:
     @cherrypy.expose
-    def index(self, tag_a='', tag_b=''):
+    def default(self, *args, **kwargs):
         result = ''
         debug = ''
         ip = cherrypy.request.remote.ip
+        path = cherrypy.request.path_info.strip('/')
+        tags = list(map(str.strip, path.split('+')))
 
-        if tag_a and tag_b:
+        if len(tags) == 2:
+            tag_a, tag_b = tags
+
             if ip in ip_cache:
                 cherrypy.response.status =  429
                 return "429 Too Many Requests"
@@ -127,29 +131,26 @@ class Gelbooru2TagsRatio:
                     ratio = ab_count / total_count
 
                     if ratio < 0.0001:
-                        result = '<span>Ratio -> 0. Not bad.</span>'
+                        result = '<span>Ratio -> 0</span><br /><span>Not bad.</span>'
                     else:
                         result = '<span>Ratio: %.4f</span>' % ratio
                 else:
-                    result = '<span>Ratio: NaN. Ooops, divided by zero!</span>'
+                    result = '<span>Ratio: NaN</span><br /><span>Ooops, divided by zero!</span>'
             except InvalidTagName as e:
-                result = '<span style="color: red">Invalid tag name <strong>%s</strong></span>' % escape(str(e))
+                result = '<span style="color: darkred">Invalid tag name <strong>%s</strong></span>' % escape(str(e))
             except NetError:
-                result = '<span style="color: red">Failed to communicate with server</span>'
+                result = '<span style="color: darkred">Failed to communicate with server</span>'
             except InvalidApiResponse:
-                result = '<span style="color: red">Got invalid api response from gelbooru</span>'
+                result = '<span style="color: darkred">Got invalid api response from gelbooru</span>'
             except SuspiciousResult as e:
-                result = '<span style="color: orange">Tag <strong>%s</strong> looks suspicious, try more popular tag</span>' % escape(str(e))
+                result = '<span style="color: darkorange">Tag <strong>%s</strong> looks suspicious, try more popular tag</span>' % escape(str(e))
 
         return '\n'.join([
             '<!doctype html>',
-            '<form method="get">'
-            '  <input type="text" name="tag_a" value="%s" />' % escape(tag_a),
-            '  <input type="text" name="tag_b" value="%s" />' % escape(tag_b),
-            '  <input type="submit" />',
-            '</form>',
+            '<div style="font-size: larger">%s</div>' % ' + '.join(map(escape, tags)),
+            '<hr>',
             '<div>%s</div>' % result,
-            '<div><code style="color: transparent">%s</code></div>' % escape(debug),
+            '<div><code style="color: gray">%s</code></div>' % escape(debug),
         ])
 
 
